@@ -8,14 +8,11 @@ var signature = require('cookie-signature');
 
 var internals = {};
 
-exports.register = function (server, options, next) {
-  server.auth.scheme('cookie', internals.implementation);
-
-  next();
-};
-
-exports.register.attributes = {
-  pkg: require('./package.json')
+module.exports = {
+  pkg: require('./package.json'),
+  register: (server, options) => {
+    server.auth.scheme('express-session-hapi', internals.implementation);
+  }
 };
 
 internals.schema = Joi.object({
@@ -48,7 +45,7 @@ internals.implementation = function (server, options) {
     val = decodeURIComponent(val).trim();
 
     // quoted values
-    if ('"' == val[0]) {
+    if ('"' === val[0]) {
       val = val.slice(1, -1);
     }
 
@@ -56,8 +53,8 @@ internals.implementation = function (server, options) {
   }
 
   var scheme = {
-    authenticate: function (request, reply) {
-      var validate = function () {
+    authenticate: async function (request, h) {
+      var validate = async function () {
         var rawCookieValue = request.state[settings.cookieName];
 
         if (!rawCookieValue) {
@@ -76,7 +73,7 @@ internals.implementation = function (server, options) {
             sessionID = undefined;
 
             if (settings.clearInvalid) {
-              reply.unstate(settings.cookieName);
+              h.unstate(settings.cookieName);
             }
 
             return unauthenticated(Boom.unauthorized('Invalid cookie'));
@@ -85,39 +82,51 @@ internals.implementation = function (server, options) {
           return unauthenticated(Boom.unauthorized(null, 'cookie'));
         }
 
-        redisClient.get(settings.sessionIDPrefix + sessionID, function (err, data) {
-          if (err) {
-            return unauthenticated(Boom.unauthorized('Server error'));
-          }
+        var promisifyGet = function (key) {
+          return new Promise((resolve, reject) => {
+            redisClient.get(key, (err, data) => {
+              if (err) {
+                return reject(err);
+              }
+
+              return resolve(data);
+            });
+          });
+        };
+
+        try {
+          let data = await promisifyGet(settings.sessionIDPrefix + sessionID);
 
           if (!data) {
             return unauthenticated(Boom.unauthorized(null, 'cookie'));
           }
 
-          data = data.toString();
-
-          try {
-            data = JSON.parse(data);
-          } catch (er) {
-            return unauthenticated(Boom.unauthorized('Invalid session data'));
-          }
+          data = JSON.parse(data.toString());
 
           if (!data[settings.userProp]) {
             return unauthenticated(Boom.unauthorized(null, 'cookie'));
           }
 
-          return reply.continue({
+          var user = data[settings.userProp];
+
+          if (user.name === 'Anonymous') {
+            return unauthenticated(Boom.unauthorized(null, 'cookie'));
+          }
+
+          return h.authenticated({
             artifacts: data,
             credentials: data,
           });
-        });
+        } catch (err) {
+          return unauthenticated(Boom.unauthorized('Server error when checking authorizaiton'));
+        }
       };
 
       var unauthenticated = function (err, result) {
         var redirectTo = settings.redirectTo;
 
         if (!redirectTo) {
-          return reply(err, null, result);
+          return h.unauthenticated(err);
         }
 
         var uri = redirectTo;
@@ -133,10 +142,12 @@ internals.implementation = function (server, options) {
           uri += settings.appendNext + '=' + encodeURIComponent(request.url.path);
         }
 
-        return reply('You are being redirected...', null, result).redirect(uri);
+        return h.response('Please refresh page after login success~').takeover();
       };
 
-      validate();
+      var validateResult = await validate();
+
+      return validateResult;
     }
   };
 

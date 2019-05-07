@@ -1,6 +1,6 @@
 {
   "name": "express-session-hapi",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "A Hapi plugin to read session data from Redis saved previously using express-session.",
   "main": "express-session-hapi.js",
   "author": "Esen Sagynov <kadishmal@gmail.com>",
@@ -13,10 +13,10 @@
     "redis": "2.6.0-1"
   },
   "engines": {
-    "node": ">=4"
+    "node": ">=10"
   },
   "peerDependencies": {
-    "hapi": "8.8.1"
+    "hapi": "^17.5.3"
   },
   "repository": {
     "type": "git",
