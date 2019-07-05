@@ -3,7 +3,7 @@
 var Boom = require('boom');
 var Hoek = require('hoek');
 var Joi = require('joi');
-var redis = require('redis');
+var Redis = require('ioredis');
 var signature = require('cookie-signature');
 
 var internals = {};
@@ -22,7 +22,8 @@ internals.schema = Joi.object({
   redirectTo: Joi.string().allow(false),
   redis: Joi.object().keys({
     host: Joi.string(),
-    port: Joi.number().default(6379)
+    port: Joi.number().default(6379),
+    clusterEnabled: Joi.boolean().default(false),
   }),
   secret: Joi.string(),
   sessionIDPrefix: Joi.string().default('sess:'),
@@ -39,7 +40,13 @@ internals.implementation = function (server, options) {
     settings.appendNext = (settings.appendNext ? 'next' : '');
   }
 
-  var redisClient = redis.createClient(settings.redis.port, settings.redis.host);
+  var redisClient;
+
+  if (settings.redis.clusterEnabled) {
+    redisClient = new Redis.Cluster([{port: settings.redis.port, host: settings.redis.host}]);
+  } else {
+    redisClient = new Redis(settings.redis.port, settings.redis.host);
+  }
 
   function decodeCookieValue(val) {
     val = decodeURIComponent(val).trim();
