@@ -10,7 +10,7 @@
     "cookie-signature": "1.0.6",
     "hoek": "3.0.4",
     "joi": "6.6.1",
-    "ioredis": "4.10.0"
+    "ioredis": "4.12.1"
   },
   "engines": {
     "node": ">=10"
