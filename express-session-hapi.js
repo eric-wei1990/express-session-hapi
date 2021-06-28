@@ -45,16 +45,30 @@ internals.implementation = function (server, options) {
 
   if (settings.redis.clusterEnabled) {
     var nodes = [{ port: settings.redis.port, host: settings.redis.host }];
-    redisClient = new Redis.Cluster(nodes, {
-      redisOptions: {
-        password: settings.redis.password,
-      },
-    });
+    var options = {};
+
+    if (settings.redis.password) {
+      options = {
+        redisOptions: {
+          password: settings.redis.password,
+        },
+      };
+    }
+    
+    redisClient = new Redis.Cluster(nodes, options);
   } else {
+    var options = {
+      port: settings.redis.port, 
+      host: settings.redis.host
+    };
+
+    if (settings.redis.password) {
+      options.password = settings.redis.password;
+    }
+
     redisClient = new Redis({
       port: settings.redis.port, 
       host: settings.redis.host,
-      password: settings.redis.password,
     });
   }
 
