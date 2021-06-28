@@ -38,7 +38,8 @@ server.register(expressSessionHapi, function (error) {
   // The connection information for Redis
   redis: Joi.object().keys({
     host: Joi.string(),
-    port: Joi.number().default(6379)
+    port: Joi.number().default(6379),
+    password: Joi.string(),
   }),
   // A secret/password to decrypt the cookie.
   secret: Joi.string(),
