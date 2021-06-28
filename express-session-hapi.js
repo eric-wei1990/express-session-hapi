@@ -23,6 +23,7 @@ internals.schema = Joi.object({
   redis: Joi.object().keys({
     host: Joi.string(),
     port: Joi.number().default(6379),
+    password: Joi.string(),
     clusterEnabled: Joi.boolean().default(false),
   }),
   secret: Joi.string(),
