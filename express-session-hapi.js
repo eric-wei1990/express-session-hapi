@@ -43,9 +43,18 @@ internals.implementation = function (server, options) {
   var redisClient;
 
   if (settings.redis.clusterEnabled) {
-    redisClient = new Redis.Cluster([{port: settings.redis.port, host: settings.redis.host}]);
+    var nodes = [{ port: settings.redis.port, host: settings.redis.host }];
+    redisClient = new Redis.Cluster(nodes, {
+      redisOptions: {
+        password: settings.redis.password,
+      },
+    });
   } else {
-    redisClient = new Redis(settings.redis.port, settings.redis.host);
+    redisClient = new Redis({
+      port: settings.redis.port, 
+      host: settings.redis.host,
+      password: settings.redis.password,
+    });
   }
 
   function decodeCookieValue(val) {
